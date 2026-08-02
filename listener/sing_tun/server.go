@@ -475,10 +475,21 @@ func New(options LC.Tun, tunnel C.Tunnel, additions ...inbound.Addition) (l *Lis
 		err = E.Cause(err, "build android rules")
 		return
 	}
-	tunIf, err := tunNew(tunOptions)
-	if err != nil {
-		err = E.Cause(err, "configure tun interface")
-		return
+
+	// WinRT VPN mode: use a custom tun backed by VpnChannel callbacks
+	// instead of creating a wintun device. Routing and DNS are handled
+	// by the C++/WinRT VPN Plugin (VpnRouteAssignment, VpnChannel).
+	var tunIf tun.Tun
+	if winrtTun := newWinrtTunFromConfig(tunName, tunMTU); winrtTun != nil {
+		log.Infoln("[TUN] Using WinRT VPN mode (no wintun, no auto-route)")
+		tunIf = winrtTun
+		// Skip DNS hijack blacklist — DNS is handled by the VPN plugin
+	} else {
+		tunIf, err = tunNew(tunOptions)
+		if err != nil {
+			err = E.Cause(err, "configure tun interface")
+			return
+		}
 	}
 
 	l.dnsServerIp = dnsServerIp
