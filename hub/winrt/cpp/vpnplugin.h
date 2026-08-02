@@ -14,8 +14,9 @@
 
 // Forward declarations of Go exported functions
 extern "C" {
-    int32_t netstack_start(const char* configPath, const char* homeDir, const char* extCtl, const char* secret);
+    int32_t netstack_init(const char* homeDir, const char* extCtl, const char* secret);
     int32_t netstack_register(void (*onReceive)(const uint8_t*, uint64_t, void*), void* context);
+    int32_t netstack_load(const char* configPath);
     int32_t netstack_send(const void* data, uint64_t size);
     void netstack_release();
     void netstack_stop();

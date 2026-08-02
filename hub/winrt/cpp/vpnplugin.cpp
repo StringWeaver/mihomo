@@ -2,6 +2,9 @@
 
 #include "vpnplugin.h"
 #include <winrt/Windows.Foundation.Collections.h>
+#include <winrt/Windows.Storage.h>
+
+#include <string>
 
 using namespace winrt;
 using namespace Windows::Foundation;
@@ -10,6 +13,20 @@ using namespace Windows::Networking;
 using namespace Windows::Networking::Sockets;
 using namespace Windows::Networking::Vpn;
 using namespace Windows::Storage::Streams;
+
+// ============================================================
+// Helper: convert wide string to UTF-8
+// ============================================================
+static std::string to_utf8(std::wstring_view wide)
+{
+    if (wide.empty()) return "";
+    int len = WideCharToMultiByte(CP_UTF8, 0, wide.data(),
+        static_cast<int>(wide.size()), nullptr, 0, nullptr, nullptr);
+    std::string out(len, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wide.data(),
+        static_cast<int>(wide.size()), out.data(), len, nullptr, nullptr);
+    return out;
+}
 
 // ============================================================
 // Connect
@@ -53,8 +70,6 @@ void VpnPlugin::ConnectCore(VpnChannel const& channel)
     VpnDomainNameAssignment domainAssignment{};
 
     // 5. Start the channel with main transport
-    //    Signature: (IPv4list, IPv6list, interfaceId, routes, domainNames,
-    //               mtu, maxFrame, reserved, transport)
     auto ipv4List = winrt::single_threaded_vector<HostName>({ HostName{ L"10.10.0.1" } });
     auto ipv6List = winrt::single_threaded_vector<HostName>({});
     IInspectable transportAsInspectable = transport.as<IInspectable>();
@@ -74,23 +89,28 @@ void VpnPlugin::ConnectCore(VpnChannel const& channel)
     VpnChannel channelCopy = channel;
     m_channelAbi = winrt::detach_abi(channelCopy);
 
-    // 7. Register inject callback FIRST (must be before netstack_start
+    // 7. Register inject callback FIRST (must be before netstack_load
     //    so newWinrtTunFromConfig detects the inject fn and skips wintun)
     netstack_register(on_receive_callback, m_channelAbi);
 
-    // 8. Start mihomo engine (config path, home dir, etc.)
-    //    This triggers hub.Parse -> sing_tun.New -> newWinrtTunFromConfig
-    //    -> detects inject fn is set -> creates winrtTun (no wintun)
-    auto configPath = u8"C:\\ProgramData\\VpnProxy\\config.yaml";
-    auto homeDir = u8"C:\\ProgramData\\VpnProxy";
-    auto extCtl = u8"127.0.0.1:9090";
-    auto secret = u8"";
-    netstack_start(
-        reinterpret_cast<const char*>(configPath),
-        reinterpret_cast<const char*>(homeDir),
-        reinterpret_cast<const char*>(extCtl),
-        reinterpret_cast<const char*>(secret)
+    // 8. Resolve paths from APPX LocalFolder (no hardcoded paths)
+    //    UWP apps use ApplicationData.Current.LocalFolder for writable storage.
+    //    config.yaml and geodata are placed here by the UWP App.
+    auto localFolder = ApplicationData::Current().LocalFolder().Path();
+    auto homeDirStr = to_utf8(localFolder);
+    auto configPathStr = homeDirStr + "\\config.yaml";
+
+    // 9. Initialize mihomo home directory (equivalent to CMFA coreInit)
+    netstack_init(
+        homeDirStr.c_str(),
+        "127.0.0.1:9090",
+        ""
     );
+
+    // 10. Load config (equivalent to CMFA load)
+    //     This triggers hub.Parse -> sing_tun.New -> newWinrtTunFromConfig
+    //     -> detects inject fn is set -> creates winrtTun (no wintun)
+    netstack_load(configPathStr.c_str());
 }
 
 // ============================================================
