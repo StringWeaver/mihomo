@@ -74,8 +74,23 @@ void VpnPlugin::ConnectCore(VpnChannel const& channel)
     VpnChannel channelCopy = channel;
     m_channelAbi = winrt::detach_abi(channelCopy);
 
-    // 7. Register inject callback with Go
+    // 7. Register inject callback FIRST (must be before netstack_start
+    //    so newWinrtTunFromConfig detects the inject fn and skips wintun)
     netstack_register(on_receive_callback, m_channelAbi);
+
+    // 8. Start mihomo engine (config path, home dir, etc.)
+    //    This triggers hub.Parse -> sing_tun.New -> newWinrtTunFromConfig
+    //    -> detects inject fn is set -> creates winrtTun (no wintun)
+    auto configPath = u8"C:\\ProgramData\\VpnProxy\\config.yaml";
+    auto homeDir = u8"C:\\ProgramData\\VpnProxy";
+    auto extCtl = u8"127.0.0.1:9090";
+    auto secret = u8"";
+    netstack_start(
+        reinterpret_cast<const char*>(configPath),
+        reinterpret_cast<const char*>(homeDir),
+        reinterpret_cast<const char*>(extCtl),
+        reinterpret_cast<const char*>(secret)
+    );
 }
 
 // ============================================================

@@ -116,12 +116,10 @@ func netstack_start(configPath *C.char, homeDir *C.char, extCtl *C.char, secret 
 // onReceive: C++ function called for each inbound packet.
 // context: opaque pointer passed back to the callback (VpnChannel ABI).
 //
-// Returns 0 on success, -1 if mihomo is not started.
+// Returns 0 on success.
+// Must be called before netstack_start so that the WinRT tun adapter
+// can detect the inject function and skip wintun creation.
 func netstack_register(onReceive C.netstack_on_receive_cb, context unsafe.Pointer) C.int {
-	if !running {
-		log.Errorln("[WinRT] netstack_register called before netstack_start")
-		return -1
-	}
 
 	injectFn := func(data []byte) error {
 		if onReceive == nil {
