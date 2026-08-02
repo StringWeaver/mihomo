@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  IgnorableNamespaces="uap uap3 rescap com">
+
+  <!-- Package identity: change Name/Publisher for your own deployment -->
+  <Identity Name="VpnProxyApp"
+            Publisher="CN=VpnProxyDev"
+            Version="1.0.0.0"
+            ProcessorArchitecture="x64"/>
+
+  <Properties>
+    <DisplayName>VpnProxy</DisplayName>
+    <PublisherDisplayName>VpnProxyDev</PublisherDisplayName>
+    <Logo>assets\logo.png</Logo>
+  </Properties>
+
+  <Resources>
+    <Resource Language="en-us"/>
+  </Resources>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Universal"
+                        MinVersion="10.0.19041.0"
+                        MaxVersionTested="10.0.26100.0"/>
+  </Dependencies>
+
+  <Applications>
+    <Application Id="App"
+                 Executable="VpnPlugin.dll"
+                 EntryPoint="Windows.UI.Xaml.Application">
+      <uap:VisualElements
+          DisplayName="VpnProxy"
+          Description="WinRT VPN Proxy (mihomo)"
+          BackgroundColor="transparent"
+          Square150x150Logo="assets\logo.png"
+          Square44x44Logo="assets\logo.png">
+        <uap:DefaultTile/>
+        <uap:SplashScreen Image="assets\splash.png"/>
+      </uap:VisualElements>
+
+      <Extensions>
+        <!-- Register VpnPlugin as an out-of-process COM server -->
+        <com:Extension Category="windows.activatableClass.outOfProcess">
+          <com:OutOfProcessServer>
+            <Path>VpnPlugin.dll</Path>
+            <ActivatableClass ActivatableClassId="VpnProxy.VpnPlugin" Thread="both"/>
+          </com:OutOfProcessServer>
+        </com:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <!-- VPN system capability (restricted) -->
+    <rescap:Capability Name="vpnSystem"/>
+    <!-- Network access -->
+    <Capability Name="internetClient"/>
+    <Capability Name="internetClientServer"/>
+    <Capability Name="privateNetworkClientServer"/>
+  </Capabilities>
+</Package>

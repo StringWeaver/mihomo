@@ -37,7 +37,6 @@ import (
 	C2 "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/hub"
 	"github.com/metacubex/mihomo/hub/executor"
-	"github.com/metacubex/mihomo/hub/route"
 	"github.com/metacubex/mihomo/listener/sing_tun"
 	"github.com/metacubex/mihomo/log"
 	_ "go.uber.org/automaxprocs"
@@ -97,9 +96,6 @@ func netstack_start(configPath *C.char, homeDir *C.char, extCtl *C.char, secret 
 	if sec != "" {
 		opts = append(opts, hub.WithSecret(sec))
 	}
-
-	// Embed mode: disable restart/upgrade (we can't restart inside broker process)
-	route.SetEmbedMode(true)
 
 	// Parse and apply config
 	if err := hub.Parse(nil, opts...); err != nil {
